@@ -550,30 +550,28 @@ export default function App() {
   </div>
 </div>
 
-{/* Обобщение (месец) – ОТДЕЛЕН контейнер */}
-<div className="rounded-2xl border border-white/10 bg-white/5 p-3 sm:p-4">
-  
-  <div className="grid grid-cols-3 gap-2 sm:gap-3">
-    <StatCard
-      title="Приход (м.)"
-      value={`+ ${currency(monthTotals.income)} лв.`}
-      icon={<BarChart2 className="w-4 h-4" />}
-      subtle="text-emerald-300"
-    />
-    <StatCard
-      title="Разход (м.)"
-      value={`- ${currency(monthTotals.expense)} лв.`}
-      icon={<PieIcon className="w-4 h-4" />}
-      subtle="text-rose-300"
-    />
-    <StatCard
-      title="Баланс (м.)"
-      value={`${currency(monthTotals.balance)} лв.`}
-      icon={<Wallet className="w-4 h-4" />}
-      subtle={monthTotals.balance >= 0 ? "text-sky-300" : "text-amber-300"}
-    />
-  </div>
+{/* Обобщение (месец) – без контейнер */}
+<div className="grid grid-cols-3 gap-3 sm:gap-4 mt-4">
+  <StatCard
+    title="Приход (м.)"
+    value={`+ ${currency(monthTotals.income)} лв.`}
+    icon={<BarChart2 className="w-4 h-4" />}
+    subtle="text-emerald-300"
+  />
+  <StatCard
+    title="Разход (м.)"
+    value={`- ${currency(monthTotals.expense)} лв.`}
+    icon={<PieIcon className="w-4 h-4" />}
+    subtle="text-rose-300"
+  />
+  <StatCard
+    title="Баланс (м.)"
+    value={`${currency(monthTotals.balance)} лв.`}
+    icon={<Wallet className="w-4 h-4" />}
+    subtle={monthTotals.balance >= 0 ? "text-sky-300" : "text-amber-300"}
+  />
 </div>
+
 
 
             <div className="rounded-2xl border border-white/10 bg-white/5 p-3 sm:p-4">
