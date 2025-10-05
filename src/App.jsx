@@ -89,7 +89,7 @@ function useStableViewportHeight() {
 }
 
 /* ==========================
-   Mini Calendar
+   Mini Calendar (центриран модал)
 ========================== */
 function MiniCalendar({ value, onSelect, onClose }) {
   const base = value ? new Date(value) : new Date();
@@ -122,47 +122,57 @@ function MiniCalendar({ value, onSelect, onClose }) {
   const nextMonth = () => setView((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1));
 
   return (
-    <div className="absolute z-20 mt-2 w-72 rounded-2xl border border-white/10 bg-[#0b0f12] p-3 shadow-xl">
-      <div className="flex items-center justify-between mb-2">
-        <button onClick={prevMonth} className="p-2 rounded-xl hover:bg-white/10" aria-label="Предишен месец">
-          <ChevronLeft className="w-5 h-5" />
-        </button>
-        <div className="text-sm font-semibold select-none">
-          {view.toLocaleString("bg-BG", { month: "long", year: "numeric" })}
+    <div className="fixed inset-0 z-50 flex items-start justify-center p-4" style={{ paddingTop: "12vh" }}>
+      {/* backdrop */}
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      {/* modal */}
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="relative w-[20rem] max-w-[calc(100vw-2rem)] rounded-2xl border border-white/10 bg-[#0b0f12] p-3 shadow-xl"
+      >
+        <div className="flex items-center justify-between mb-2">
+          <button onClick={prevMonth} className="p-2 rounded-xl hover:bg-white/10" aria-label="Предишен месец">
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <div className="text-sm font-semibold select-none">
+            {view.toLocaleString("bg-BG", { month: "long", year: "numeric" })}
+          </div>
+          <button onClick={nextMonth} className="p-2 rounded-xl hover:bg-white/10" aria-label="Следващ месец">
+            <ChevronRight className="w-5 h-5" />
+          </button>
         </div>
-        <button onClick={nextMonth} className="p-2 rounded-xl hover:bg-white/10" aria-label="Следващ месец">
-          <ChevronRight className="w-5 h-5" />
-        </button>
-      </div>
 
-      <div className="grid grid-cols-7 gap-1 text-[11px] text-white/70 mb-1">
-        {["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Нд"].map((d) => (
-          <div key={d} className="text-center select-none">{d}</div>
-        ))}
-      </div>
-      <div className="grid grid-cols-7 gap-1">
-        {grid.map((d, i) =>
-          d ? (
-            <button
-              key={i}
-              onClick={() => pick(d)}
-              className={`h-10 rounded-xl text-sm touch-manipulation ${
-                isToday(d)
-                  ? "bg-white/10 border border-white/20"
-                  : "bg-white/5 border border-white/10"
-              } hover:bg-white/15 active:scale-[0.98] transition`}
-            >
-              {d}
-            </button>
-          ) : (
-            <div key={i} className="h-10" />
-          )
-        )}
-      </div>
-      <div className="flex justify-end mt-2">
-        <button onClick={onClose} className="text-xs px-2 py-1 rounded-lg hover:bg-white/10">
-          Затвори
-        </button>
+        <div className="grid grid-cols-7 gap-1 text-[11px] text-white/70 mb-1">
+          {["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Нд"].map((d) => (
+            <div key={d} className="text-center select-none">{d}</div>
+          ))}
+        </div>
+        <div className="grid grid-cols-7 gap-1">
+          {grid.map((d, i) =>
+            d ? (
+              <button
+                key={i}
+                onClick={() => pick(d)}
+                className={`h-10 rounded-xl text-sm touch-manipulation ${
+                  isToday(d)
+                    ? "bg-white/10 border border-white/20"
+                    : "bg-white/5 border border-white/10"
+                } hover:bg-white/15 active:scale-[0.98] transition`}
+              >
+                {d}
+              </button>
+            ) : (
+              <div key={i} className="h-10" />
+            )
+          )}
+        </div>
+
+        <div className="flex justify-end mt-2">
+          <button onClick={onClose} className="text-xs px-2 py-1 rounded-lg hover:bg-white/10">
+            Затвори
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -174,16 +184,20 @@ function MiniCalendar({ value, onSelect, onClose }) {
 export default function App() {
   useStableViewportHeight();
 
+  // Tabs
   const [tab, setTab] = useState("input");
 
+  // Data
   const [transactions, setTransactions] = useState(() => loadLS("budget_tx", []));
 
+  // Expense categories only
   const defaultExpenseCats = ["Храна", "Транспорт", "Сметки", "Наем"];
   const [expenseCategories, setExpenseCategories] = useState(() => {
     const old = loadLS("budget_categories", defaultExpenseCats);
     return old.filter((c) => c !== "Доход");
   });
 
+  // Form state
   const [type, setType] = useState("expense"); // income | expense
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState(
@@ -194,22 +208,36 @@ export default function App() {
   const [newCat, setNewCat] = useState("");
   const [showCal, setShowCal] = useState(false);
 
+  // Month cursor for analysis
   const [monthCursor, setMonthCursor] = useState(() => getMonthKey(new Date()));
 
+  // Persist
   useEffect(() => saveLS("budget_tx", transactions), [transactions]);
   useEffect(() => saveLS("budget_categories", expenseCategories), [expenseCategories]);
 
+  // Keep category in sync when switching type
   useEffect(() => {
     if (type === "income") setCategory(INCOME_CATS[0]);
     else setCategory(expenseCategories[0] || "");
   }, [type, expenseCategories]);
 
+  // Lock body scroll while calendar is open
+  useEffect(() => {
+    if (showCal) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => { document.body.style.overflow = prev; };
+    }
+  }, [showCal]);
+
+  // Totals
   const totals = useMemo(() => {
     let income = 0, expense = 0;
     for (const t of transactions) t.type === "income" ? (income += t.amount) : (expense += t.amount);
     return { income, expense, balance: income - expense };
   }, [transactions]);
 
+  // Month navigation
   const monthDate = useMemo(() => {
     const [y, m] = monthCursor.split("-").map(Number);
     return new Date(y, m - 1, 1);
@@ -226,6 +254,7 @@ export default function App() {
     setMonthCursor(getMonthKey(d));
   };
 
+  // Month data
   const monthRange = useMemo(() => {
     const start = startOfMonth(monthDate);
     const end = endOfMonth(monthDate);
@@ -266,6 +295,7 @@ export default function App() {
     return { income, expense, balance: income - expense };
   }, [txThisMonth]);
 
+  // Chart sizing / scroll
   const chartScrollRef = useRef(null);
   const [chartViewportW, setChartViewportW] = useState(320);
   useEffect(() => {
@@ -291,6 +321,7 @@ export default function App() {
   const chartNeededW = dailyExpenseData.length * perDay;
   const chartWidth = Math.max(chartViewportW, chartNeededW);
 
+  // Handlers
   const addTransaction = (e) => {
     e.preventDefault();
     const amt = Number(amount);
@@ -319,7 +350,7 @@ export default function App() {
   return (
     <div
       className="w-full bg-[#0b0f12] text-[#e5e7eb]"
-      style={{ minHeight: "calc(var(--vh, 1vh) * 100)" }}
+      style={{ minHeight: "calc(var(--vh, 1vh) * 100)", overflowX: "hidden" }}
     >
       <header
         className="sticky top-0 z-10 bg-[#0b0f12]/90 backdrop-blur border-b border-white/10"
@@ -360,7 +391,7 @@ export default function App() {
                 icon={<BarChart2 className="w-4 h-4" />}
                 subtle="text-emerald-300"
               />
-            <StatCard
+              <StatCard
                 title="Разход"
                 value={`- ${currency(totals.expense)} лв.`}
                 icon={<PieIcon className="w-4 h-4" />}
@@ -399,7 +430,6 @@ export default function App() {
 
                 <div className="grid grid-cols-2 gap-2">
                   <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2">
-                    
                     <input
                       required
                       inputMode="decimal"
@@ -408,11 +438,9 @@ export default function App() {
                       value={amount}
                       onChange={(e) => setAmount(e.target.value.replace(",", "."))}
                       className="bg-transparent outline-none w-full"
-                      
                     />
                     <span>лв</span>
                   </div>
-                  
 
                   <div className="relative">
                     <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2">
@@ -468,7 +496,7 @@ export default function App() {
               </form>
             </div>
 
-          <div className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
+            <div className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
               <div className="w-full overflow-x-auto" role="region" aria-label="Хоризонтално превъртане на таблицата">
                 <table className="w-full min-w-[560px] text-sm">
                   <thead className="bg-white/5">
@@ -577,9 +605,9 @@ export default function App() {
                     <XAxis dataKey="label" tick={{ fill: "#cbd5e1", fontSize: 12 }} stroke="#94a3b8" />
                     <YAxis tick={{ fill: "#cbd5e1", fontSize: 12 }} stroke="#94a3b8" />
                     <Tooltip
-                      cursor={false}  // ❌ спира белия hover фон
-                        wrapperStyle={{ background: "transparent", border: "none", boxShadow: "none" }}
-                        contentStyle={{
+                      cursor={false}
+                      wrapperStyle={{ background: "transparent", border: "none", boxShadow: "none" }}
+                      contentStyle={{
                         background: "#0b0f12",
                         border: "1px solid rgba(255,255,255,0.12)",
                         borderRadius: 12,
@@ -609,7 +637,7 @@ export default function App() {
                   onClick={addExpenseCategory}
                   className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 hover:bg-emerald-500/20"
                 >
-                  <FolderPlus className="w-4 h-4" /> 
+                  <FolderPlus className="w-4 h-4" />
                 </button>
               </div>
 
@@ -632,8 +660,6 @@ export default function App() {
                 * Категориите за <strong>приходи</strong> са фиксирани: „Заплата“, „Свободна практика“, „Друго“.
               </p>
             </div>
-
-           
           </section>
         )}
       </main>
@@ -643,7 +669,7 @@ export default function App() {
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 6px)" }}
       >
         <div className="max-w-xl mx-auto px-4 py-2 text-center text-xs text-white/60">
-          Данните се пазят локално на устройството (localStorage).
+          
         </div>
       </footer>
     </div>

@@ -1,8 +1,3 @@
-self.addEventListener('install', (event) => {
-  self.skipWaiting();
-});
-self.addEventListener('activate', (event) => {
-  clients.claim();
-});
-// Optional: basic fetch passthrough (keeps PWA "installable" without aggressive caching)
-self.addEventListener('fetch', () => {});
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', (event) => event.waitUntil(clients.claim()));
+// Не хващаме fetch — оставяме браузъра да си тегли директно (няма кеш ловене)

@@ -4,3 +4,9 @@
 
 html, body, #root { height: 100%; }
 * { -webkit-tap-highlight-color: transparent; }
+html, body, #root {
+  height: 100%;
+  overflow-x: hidden; /* стоп на хоризонтално разместване */
+}
+
+* { box-sizing: border-box; }
