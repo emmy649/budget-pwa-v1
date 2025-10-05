@@ -383,29 +383,10 @@ export default function App() {
 
       <main className="max-w-xl mx-auto p-4 pb-28 sm:pb-24">
         {tab === "input" ? (
-          <section className="space-y-4">
-            <div className="grid grid-cols-3 gap-2 sm:gap-3">
-              <StatCard
-                title="Приход"
-                value={`+ ${currency(totals.income)} лв.`}
-                icon={<BarChart2 className="w-4 h-4" />}
-                subtle="text-emerald-300"
-              />
-              <StatCard
-                title="Разход"
-                value={`- ${currency(totals.expense)} лв.`}
-                icon={<PieIcon className="w-4 h-4" />}
-                subtle="text-rose-300"
-              />
-              <StatCard
-                title="Баланс"
-                value={`${currency(totals.balance)} лв.`}
-                icon={<Wallet className="w-4 h-4" />}
-                subtle={totals.balance >= 0 ? "text-sky-300" : "text-amber-300"}
-              />
-            </div>
+          <section className="space-y-6 mt-6 sm:mt-8">
 
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-3 sm:p-4">
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:p-6">
+
               <form onSubmit={addTransaction} className="space-y-3">
                 <div className="grid grid-cols-2 gap-2">
                   <label className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/20 p-2 active:scale-[0.99]">
@@ -488,15 +469,18 @@ export default function App() {
                 </div>
 
                 <button
-                  type="submit"
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-white/90 text-black py-3 font-semibold hover:bg-white active:scale-[0.995]"
-                >
-                  <PlusCircle className="w-5 h-5" /> Запази
-                </button>
+  type="submit"
+  className="w-full mt-4 inline-flex items-center justify-center gap-2 rounded-xl bg-white/90 text-black py-2.5 text-sm font-semibold shadow-sm hover:shadow-md
+ hover:bg-white active:scale-[0.995] transition-all"
+>
+  <PlusCircle className="w-4 h-4" /> Запази
+</button>
+
               </form>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
+           <div className="rounded-2xl border border-white/10 bg-white/5 overflow-hidden p-4 sm:p-6">
+
               <div className="w-full overflow-x-auto" role="region" aria-label="Хоризонтално превъртане на таблицата">
                 <table className="w-full min-w-[560px] text-sm">
                   <thead className="bg-white/5">
@@ -549,41 +533,48 @@ export default function App() {
             </div>
           </section>
         ) : (
-          <section className="space-y-4">
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-3 sm:p-4">
-              <div className="flex items-center justify-between gap-2">
-                <button onClick={prevMonth} className="p-2 rounded-xl border border-white/10 hover:bg-white/10" aria-label="Предишен месец">
-                  <ArrowLeft className="w-4 h-4" />
-                </button>
-                <h2 className="text-base font-semibold truncate">
-                  {monthDate.toLocaleString(undefined, { month: "long", year: "numeric" })}
-                </h2>
-                <button onClick={nextMonth} className="p-2 rounded-xl border border-white/10 hover:bg-white/10" aria-label="Следващ месец">
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
 
-              <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
-                <StatCard
-                  title="Приход (м.)"
-                  value={`+ ${currency(monthTotals.income)} лв.`}
-                  icon={<BarChart2 className="w-4 h-4" />}
-                  subtle="text-emerald-300"
-                />
-                <StatCard
-                  title="Разход (м.)"
-                  value={`- ${currency(monthTotals.expense)} лв.`}
-                  icon={<PieIcon className="w-4 h-4" />}
-                  subtle="text-rose-300"
-                />
-                <StatCard
-                  title="Баланс (м.)"
-                  value={`${currency(monthTotals.balance)} лв.`}
-                  icon={<Wallet className="w-4 h-4" />}
-                  subtle={monthTotals.balance >= 0 ? "text-sky-300" : "text-amber-300"}
-                />
-              </div>
-            </div>
+          <section className="space-y-4">
+            {/* Навигация по месеци – САМО навигация */}
+<div className="rounded-2xl border border-white/10 bg-white/5 p-3 sm:p-4">
+  <div className="flex items-center justify-between gap-2">
+    <button onClick={prevMonth} className="p-2 rounded-xl border border-white/10 hover:bg-white/10" aria-label="Предишен месец">
+      <ArrowLeft className="w-4 h-4" />
+    </button>
+    <h2 className="text-base font-semibold truncate">
+      {monthDate.toLocaleString(undefined, { month: "long", year: "numeric" })}
+    </h2>
+    <button onClick={nextMonth} className="p-2 rounded-xl border border-white/10 hover:bg-white/10" aria-label="Следващ месец">
+      <ArrowRight className="w-4 h-4" />
+    </button>
+  </div>
+</div>
+
+{/* Обобщение (месец) – ОТДЕЛЕН контейнер */}
+<div className="rounded-2xl border border-white/10 bg-white/5 p-3 sm:p-4">
+  
+  <div className="grid grid-cols-3 gap-2 sm:gap-3">
+    <StatCard
+      title="Приход (м.)"
+      value={`+ ${currency(monthTotals.income)} лв.`}
+      icon={<BarChart2 className="w-4 h-4" />}
+      subtle="text-emerald-300"
+    />
+    <StatCard
+      title="Разход (м.)"
+      value={`- ${currency(monthTotals.expense)} лв.`}
+      icon={<PieIcon className="w-4 h-4" />}
+      subtle="text-rose-300"
+    />
+    <StatCard
+      title="Баланс (м.)"
+      value={`${currency(monthTotals.balance)} лв.`}
+      icon={<Wallet className="w-4 h-4" />}
+      subtle={monthTotals.balance >= 0 ? "text-sky-300" : "text-amber-300"}
+    />
+  </div>
+</div>
+
 
             <div className="rounded-2xl border border-white/10 bg-white/5 p-3 sm:p-4">
               <h3 className="text-sm uppercase tracking-wider text-white/70 mb-3">Разходи по дни</h3>
