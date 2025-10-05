@@ -468,13 +468,15 @@ export default function App() {
                   </div>
                 </div>
 
-                <button
-  type="submit"
-  className="w-full mt-4 inline-flex items-center justify-center gap-2 rounded-xl bg-white/90 text-black py-2.5 text-sm font-semibold shadow-sm hover:shadow-md
- hover:bg-white active:scale-[0.995] transition-all"
->
-  <PlusCircle className="w-4 h-4" /> Запази
-</button>
+                
+                <div className="flex justify-center mt-5">
+                   <button
+                      type="submit"
+                       className="inline-flex items-center justify-center gap-2 rounded-xl bg-white/30 text-black px-6 py-2.5 text-sm font-semibold shadow-sm hover:shadow-md hover:bg-white/50 active:scale-[0.99] transition-all"
+                    >
+                        <PlusCircle className="w-4 h-4" /> Запази
+                      </button>
+                </div>
 
               </form>
             </div>
@@ -551,21 +553,21 @@ export default function App() {
 </div>
 
 {/* Обобщение (месец) – без контейнер */}
-<div className="grid grid-cols-3 gap-3 sm:gap-4 mt-4">
+<div className="grid grid-cols-3 gap-2 sm:gap-3">
   <StatCard
-    title="Приход (м.)"
-    value={`+ ${currency(monthTotals.income)} лв.`}
+    title="Приход"
+    value={` ${currency(monthTotals.income)} лв.`}
     icon={<BarChart2 className="w-4 h-4" />}
     subtle="text-emerald-300"
   />
   <StatCard
-    title="Разход (м.)"
-    value={`- ${currency(monthTotals.expense)} лв.`}
+    title="Разход"
+    value={`${currency(monthTotals.expense)} лв.`}
     icon={<PieIcon className="w-4 h-4" />}
     subtle="text-rose-300"
   />
   <StatCard
-    title="Баланс (м.)"
+    title="Баланс"
     value={`${currency(monthTotals.balance)} лв.`}
     icon={<Wallet className="w-4 h-4" />}
     subtle={monthTotals.balance >= 0 ? "text-sky-300" : "text-amber-300"}
