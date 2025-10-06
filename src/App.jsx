@@ -432,8 +432,13 @@ export default function App() {
                         className="bg-transparent outline-none w-full text-left truncate"
                         title="Избор на дата"
                       >
-                        {date}
+                        {new Date(date).toLocaleDateString("bg-BG", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "2-digit",
+                          })}
                       </button>
+
                       {showCal && (
                         <button
                           type="button"
@@ -507,7 +512,13 @@ export default function App() {
                         .sort((a, b) => new Date(b.date) - new Date(a.date))
                         .map((t) => (
                           <tr key={t.id} className="border-t border-white/10">
-                            <td className="px-3 py-2 text-white/80 whitespace-nowrap">{t.date}</td>
+                            <td className="px-3 py-2 text-white/80 whitespace-nowrap">
+                               {new Date(t.date).toLocaleDateString("bg-BG", {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "2-digit",
+                               })}
+                                </td>
                             <td className="px-3 py-2">
                               <span
                                 className={`text-xs px-2 py-0.5 rounded-full ${
@@ -536,46 +547,46 @@ export default function App() {
           </section>
         ) : (
 
+
+     /* СТРАНИЦА  АНАЛИЗИ */     
+
           <section className="space-y-4">
             {/* Навигация по месеци – САМО навигация */}
-<div className="rounded-2xl border border-white/10 bg-white/5 p-3 sm:p-4">
-  <div className="flex items-center justify-between gap-2">
-    <button onClick={prevMonth} className="p-2 rounded-xl border border-white/10 hover:bg-white/10" aria-label="Предишен месец">
-      <ArrowLeft className="w-4 h-4" />
-    </button>
-    <h2 className="text-base font-semibold truncate">
-      {monthDate.toLocaleString(undefined, { month: "long", year: "numeric" })}
-    </h2>
-    <button onClick={nextMonth} className="p-2 rounded-xl border border-white/10 hover:bg-white/10" aria-label="Следващ месец">
-      <ArrowRight className="w-4 h-4" />
-    </button>
-  </div>
-</div>
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-3 sm:p-4">
+              <div className="flex items-center justify-between gap-2">
+                 <button onClick={prevMonth} className="p-2 rounded-xl border border-white/10 hover:bg-white/10" aria-label="Предишен месец">
+                     <ArrowLeft className="w-4 h-4" />
+                </button>
+                     <h2 className="text-base font-semibold truncate">
+                        {monthDate.toLocaleString(undefined, { month: "long", year: "numeric" })}
+                     </h2>
+                <button onClick={nextMonth} className="p-2 rounded-xl border border-white/10 hover:bg-white/10" aria-label="Следващ месец">
+                     <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+              </div>
 
-{/* Обобщение (месец) – без контейнер */}
-<div className="grid grid-cols-3 gap-2 sm:gap-3">
-  <StatCard
-    title="Приход"
-    value={` ${currency(monthTotals.income)} лв.`}
-    icon={<BarChart2 className="w-4 h-4" />}
-    subtle="text-emerald-300"
-  />
-  <StatCard
-    title="Разход"
-    value={`${currency(monthTotals.expense)} лв.`}
-    icon={<PieIcon className="w-4 h-4" />}
-    subtle="text-rose-300"
-  />
-  <StatCard
-    title="Баланс"
-    value={`${currency(monthTotals.balance)} лв.`}
-    icon={<Wallet className="w-4 h-4" />}
-    subtle={monthTotals.balance >= 0 ? "text-sky-300" : "text-amber-300"}
-  />
-</div>
-
-
-
+               {/* Обобщение (месец) – без контейнер */}
+                   <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                          <StatCard
+                               title="Приход"
+                               value={` ${currency(monthTotals.income)} лв.`}
+                               icon={<BarChart2 className="w-4 h-4" />}
+                               subtle="text-emerald-300"
+                               />
+                          <StatCard
+                                title="Разход"
+                                value={`${currency(monthTotals.expense)} лв.`}
+                                icon={<PieIcon className="w-4 h-4" />}
+                                subtle="text-rose-300"
+                              />
+                          <StatCard
+                                title="Баланс"
+                                value={`${currency(monthTotals.balance)} лв.`}
+                                icon={<Wallet className="w-4 h-4" />}
+                                subtle={monthTotals.balance >= 0 ? "text-sky-300" : "text-amber-300"}
+                              />
+                 </div>
             <div className="rounded-2xl border border-white/10 bg-white/5 p-3 sm:p-4">
               <h3 className="text-sm uppercase tracking-wider text-white/70 mb-3">Разходи по дни</h3>
 
@@ -607,7 +618,7 @@ export default function App() {
                       labelFormatter={(v) => `Дата -  ${v}`}
                       formatter={(v) => [`${currency(v)} лв.`, "Разход"]}
                     />
-                    <Bar dataKey="expense" fill="#60a5fa" barSize={22} radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="expense" fill="#60a5fa" barSize={50} radius={[6, 6, 0, 0]} />
                   </BarChart>
                 </div>
               </div>
