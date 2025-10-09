@@ -1,8 +1,8 @@
+// vite.config.js
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  // важно за репо emmy649/budget-pwa-v1 на GitHub Pages
-  base: '/budget-pwa-v1/',
+  base: '/budget-pwa-v1/', // ← точно името на репото в GitHub
 })
