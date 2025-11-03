@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   PlusCircle,
   Trash2,
@@ -16,12 +16,64 @@ import {
   ChevronDown,
   ChevronUp,
   Import,
+  Quote,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 
 /* ==========================
    Helpers
 ========================== */
+
+// Лек списък с дневни цитати (можеш да добавяш/сменяш)
+const QUOTES = [
+  "Малките стъпки всеки ден правят голямата промяна.",
+  "Бюджетът е свобода, не ограничение.",
+  "Днес е най-добрият ден да бъдеш последователна.",
+  "Всяка записана стотинка е крачка към целта.",
+  "Фокус върху важните неща — другото отпада.",
+  "Парите следват вниманието ти. Насочи го осъзнато.",
+  "Това, което измерваш, започваш да управляваш.",
+  "Не ти трябва повече, трябва ти яснота.",
+  "Стабилността не е скучна — тя е форма на сила.",
+  "Всяка промяна започва с едно решение: 'Днес ще започна.'",
+  "По-добре малко и устойчиво, отколкото бързо и изтощаващо.",
+  "Дисциплината е форма на любов към себе си.",
+  "Днес е денят, в който можеш да се подредиш вътрешно.",
+  "Бавното развитие също е развитие.",
+  "Не е нужно да си перфектна, нужно е да продължаваш.",
+  "Всяка бележка тук е следа на осъзнатост.",
+  "Балансът не е нещо, което намираш, а нещо, което създаваш.",
+  "Когато имаш посока, всяко 'не' става по-лесно.",
+  "Не отлагай себе си за утре.",
+  "Щастието е в усещането за напредък, не в крайната точка.",
+  "Днес можеш да избереш лекотата пред хаоса.",
+  "Тялото, умът и портфейлът искат едно и също — постоянство.",
+  "Колкото по-просто живееш, толкова по-ясно мислиш.",
+  "Времето е най-ценното ти богатство — пази го.",
+  "Във фокуса има сила. В разпиляването — умора.",
+  "Не харчи, за да запълниш празнина. Създавай, за да се изпълниш.",
+  "Промяната започва с едно малко 'днес няма'.",
+  "Усещането за контрол е най-добрата награда.",
+  "Истинската сигурност идва, когато знаеш, че можеш да се справиш.",
+  "Всяка малка победа заслужава да бъде отбелязана.",
+  "Довери се на процеса, дори когато е тих.",
+  "Понякога най-добрият напредък е просто да не се отказваш.",
+  "Хаосът отвън се подрежда, когато вътре стане ясно.",
+  "Не чакай мотивация — движението я създава.",
+  "Всичко, което следиш, започва да се подобрява.",
+  "Бъди приятел на времето си, не негов враг.",
+  "Осъзнатостта е форма на красота.",
+  "Малките навици създават големи промени.",
+  "Всяка осъзната минута е инвестиция в себе си.",
+  "Спокойствието е новата продуктивност.",
+];
+
+const pickDailyQuote = () => {
+  const d = new Date();
+  const seed =
+    d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+  return QUOTES[seed % QUOTES.length];
+};
 
 const todayISO = () => new Date().toISOString().slice(0, 10); // YYYY-MM-DD
 
@@ -34,10 +86,15 @@ const loadLS = (key, fallback) => {
   }
 };
 
+// >>> не мълчим при грешка; връщаме boolean
 const saveLS = (key, value) => {
   try {
     localStorage.setItem(key, JSON.stringify(value));
-  } catch {}
+    return true;
+  } catch (e) {
+    console.error("localStorage error:", e);
+    return false;
+  }
 };
 
 const currency = (n) =>
@@ -208,7 +265,6 @@ function MonthSpendCalendar({ monthDate, dailyData, onDayClick }) {
     typeof window !== "undefined" && matchMedia("(pointer: coarse)").matches;
   const ref = React.useRef(null);
 
-  // Намираме колко е „силният“ ден – за скала на цвета
   const max = useMemo(
     () => Math.max(1, ...dailyData.map((d) => d.expense || 0)),
     [dailyData]
@@ -238,14 +294,13 @@ function MonthSpendCalendar({ monthDate, dailyData, onDayClick }) {
   }
 
   const colorFor = (amt) => {
-    // 0 → почти без фон; max → #60a5fa плътно
     const opacity = Math.max(0.12, Math.min(0.9, (amt / max) * 0.9));
-    return `rgba(96,165,250,${opacity})`; // #60a5fa
+    return `rgba(96,165,250,${opacity})`;
   };
 
   const onEnter = (e, c) => {
     if (c.empty) return;
-    if (isTouch) return; // на touch не ползваме hover tooltip
+    if (isTouch) return;
     const rect = ref.current?.getBoundingClientRect();
     const x = (e.touches?.[0]?.clientX ?? e.clientX) - (rect?.left ?? 0);
     const y = (e.touches?.[0]?.clientY ?? e.clientY) - (rect?.top ?? 0);
@@ -255,13 +310,12 @@ function MonthSpendCalendar({ monthDate, dailyData, onDayClick }) {
 
   const onClick = (c) => {
     if (c.empty) return;
-    setSelected({ label: c.label, amount: c.amount }); // 🔒 остава фиксирано
+    setSelected({ label: c.label, amount: c.amount });
     onDayClick?.(c);
   };
 
   return (
     <div className="relative">
-      {/* Заглавие на дните */}
       <div className="grid grid-cols-7 gap-1 text-[11px] text-white/70 mb-1">
         {["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Нд"].map((d) => (
           <div key={d} className="text-center select-none">
@@ -270,7 +324,6 @@ function MonthSpendCalendar({ monthDate, dailyData, onDayClick }) {
         ))}
       </div>
 
-      {/* Самият календар */}
       <div
         ref={ref}
         className="grid grid-cols-7 gap-1 select-none"
@@ -286,15 +339,11 @@ function MonthSpendCalendar({ monthDate, dailyData, onDayClick }) {
               onMouseEnter={(e) => onEnter(e, c)}
               onMouseMove={(e) => onEnter(e, c)}
               onMouseLeave={onLeave}
-              onClick={() => onClick(c)} // tap/click фиксира
-              title={
-                !isTouch ? `${c.label} — ${currency(c.amount)} лв.` : undefined
-              }
+              onClick={() => onClick(c)}
+              title={!isTouch ? `${c.label} — ${currency(c.amount)} лв.` : undefined}
               className="h-9 rounded-xl border border-white/10 text-xs leading-none flex items-center justify-center hover:opacity-90 active:scale-[0.98] transition"
               style={{
-                background: c.amount
-                  ? colorFor(c.amount)
-                  : "rgba(255,255,255,0.06)",
+                background: c.amount ? colorFor(c.amount) : "rgba(255,255,255,0.06)",
               }}
               aria-label={`${c.label} — ${currency(c.amount)} лв.`}
             >
@@ -304,7 +353,6 @@ function MonthSpendCalendar({ monthDate, dailyData, onDayClick }) {
         )}
       </div>
 
-      {/* Tooltip (desktop) */}
       {!isTouch && hover && (
         <div
           className="pointer-events-none absolute z-10 rounded-xl border border-white/10 bg-[#0b0f12] px-2 py-1 text-[12px] shadow"
@@ -315,7 +363,6 @@ function MonthSpendCalendar({ monthDate, dailyData, onDayClick }) {
         </div>
       )}
 
-      {/* Инфо за избран ден (mobile tap) */}
       {selected && (
         <div className="mt-2 text-l text-[#9ebee5] flex items-center justify-between gap-2">
           <div>
@@ -338,64 +385,204 @@ function MonthSpendCalendar({ monthDate, dailyData, onDayClick }) {
   );
 }
 
+/* модал за „Разходи по категория“ */
+function CategoryModal({ category = "", items = [], onClose }) {
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    const t = requestAnimationFrame(() => setOpen(true));
+    const onKey = (e) => e.key === "Escape" && onClose?.();
+    window.addEventListener("keydown", onKey);
+    return () => {
+      cancelAnimationFrame(t);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [onClose]);
+
+  const sorted = (items || [])
+    .slice()
+    .sort((a, b) => {
+      const da = new Date(a.date);
+      const db = new Date(b.date);
+      const dayCmp = da.getDate() - db.getDate();
+      if (dayCmp !== 0) return dayCmp;
+      return da - db;
+    });
+
+  const currency = (n) =>
+    (Number(n) || 0).toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+
+  return (
+    <div
+      className="fixed inset-0 z-[999] flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Разходи по категория: ${category}`}
+    >
+      <div
+        className={`absolute inset-0 bg-black/50 transition-opacity duration-200 ${
+          open ? "opacity-100" : "opacity-0"
+        }`}
+        onClick={onClose}
+      />
+      <div
+        className={`
+          relative w-[min(460px,92%)] sm:w-[min(520px,80%)]
+          rounded-2xl border border-white/10 bg-[#0b0f12]/95 shadow-2xl
+          transition-all duration-200
+          ${open ? "opacity-100 scale-100" : "opacity-0 scale-95"}
+        `}
+        style={{ maxHeight: "85vh", overflow: "hidden" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-4 py-3 sm:px-5 sm:py-4 border-b border-white/10">
+          <div className="text-sm sm:text-base font-semibold truncate">
+            Разходи: {category}
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg hover:bg-white/10"
+            aria-label="Затвори"
+            title="Затвори"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-4 sm:p-5 max-h-[calc(85vh-60px)] overflow-auto">
+          {sorted.length === 0 ? (
+            <p className="text-white/60 text-sm">
+              Няма разходи в тази категория за този месец.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {sorted.map((t) => (
+                <li
+                  key={t.id}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5"
+                  title={t.note?.trim() ? t.note : ""}
+                >
+                  <div className="min-w-0 text-[13px] sm:text-sm text-white/85 truncate">
+                    {t.note?.trim() ? t.note : "—"}
+                  </div>
+                  <div className="shrink-0 text-[13px] sm:text-sm font-semibold text-[#9ec7ff]">
+                    {currency(t.amount)} лв.
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ==========================
    Main App
 ========================== */
 export default function App() {
   useStableViewportHeight();
 
+  // Цитати
+  const [quote, setQuote] = useState(() => pickDailyQuote());
+  const shuffleQuote = () =>
+    setQuote(QUOTES[Math.floor(Math.random() * QUOTES.length)]);
+  useEffect(() => {
+    const tickAtMidnight = () => setQuote(pickDailyQuote());
+    const now = new Date();
+    const next = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate() + 1,
+      0,
+      0,
+      1
+    );
+    const ms = next - now;
+    const t = setTimeout(tickAtMidnight, ms);
+    return () => clearTimeout(t);
+  }, []);
+
+  // Модал за категории
+  const [catModal, setCatModal] = useState({
+    open: false,
+    category: "",
+    items: [],
+  });
+
   // Tabs
   const [tab, setTab] = useState("input");
+  const [openCatSums, setOpenCatSums] = useState(false);
 
-  const [openRecent, setOpenRecent] = useState(false); // сгъваеми Последни записи
-  const [openCatSums, setOpenCatSums] = useState(true); // Разходи по категории – collapsible
-
-  // Data
+  // Данни
   const [transactions, setTransactions] = useState(() =>
     loadLS("budget_tx", [])
   );
 
-  // Expense categories only
+  // >>> държим предишното валидно състояние за rollback при QuotaExceeded
+  const prevTxRef = useRef(transactions);
+  const [persistError, setPersistError] = useState(null);
+
+  // Разходни категории
   const defaultExpenseCats = ["Храна", "Транспорт", "Сметки", "Наем"];
   const [expenseCategories, setExpenseCategories] = useState(() => {
     const old = loadLS("budget_categories", defaultExpenseCats);
     return old.filter((c) => c !== "Доход");
   });
 
-  // Wasteful ids (marked as "излишен")
+  // „Излишни“ разходи
   const [wasteful, setWasteful] = useState(
     () => new Set(loadLS("budget_waste_ids", []))
   );
-  useEffect(() => saveLS("budget_waste_ids", Array.from(wasteful)), [wasteful]);
 
-  // Form state
+  // тип/форма
   const [type, setType] = useState("expense"); // income | expense
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState(
     (type === "income" ? INCOME_CATS[0] : expenseCategories[0]) || ""
   );
   const [date, setDate] = useState(todayISO());
-  const [note, setNote] = useState(""); // 🆕 Бележка
+  const [note, setNote] = useState("");
 
   const [newCat, setNewCat] = useState("");
   const [showCal, setShowCal] = useState(false);
 
-  // Month cursor for analysis
+  // Месечна навигация
   const [monthCursor, setMonthCursor] = useState(() =>
     getMonthKey(new Date())
   );
-
-  // Collapsibles in Analysis
   const [openCats, setOpenCats] = useState(false);
   const [openMonthRecords, setOpenMonthRecords] = useState(false);
 
-  // Persist
-  useEffect(() => saveLS("budget_tx", transactions), [transactions]);
-  useEffect(() => saveLS("budget_categories", expenseCategories), [
-    expenseCategories,
-  ]);
+  // >>> Пазим транзакциите с проверка и rollback при грешка
+  useEffect(() => {
+    const ok = saveLS("budget_tx", transactions);
+    if (!ok) {
+      setPersistError(
+        "Паметта на браузъра е запълнена. Експортирай или изтрий стари записи."
+      );
+      setTransactions(prevTxRef.current); // rollback към последното успешно
+    } else {
+      prevTxRef.current = transactions; // актуализираме „валидното“
+      setPersistError(null);
+    }
+  }, [transactions]);
 
-  // Keep category in sync when switching type
+  // Пазим категории (по-малко данни, рискът е малък)
+  useEffect(() => {
+    saveLS("budget_categories", expenseCategories);
+  }, [expenseCategories]);
+
+  // Пазим wasteful id-та
+  useEffect(() => {
+    saveLS("budget_waste_ids", Array.from(wasteful));
+  }, [wasteful]);
+
+  // поддръжка на категория спрямо тип
   useEffect(() => {
     if (type === "income") setCategory(INCOME_CATS[0]);
     else setCategory(expenseCategories[0] || "");
@@ -421,7 +608,7 @@ export default function App() {
     return { income, expense, balance: income - expense };
   }, [transactions]);
 
-  // Month navigation
+  // Month navigation helpers
   const monthDate = useMemo(() => {
     const [y, m] = monthCursor.split("-").map(Number);
     return new Date(y, m - 1, 1);
@@ -453,7 +640,6 @@ export default function App() {
     });
   }, [transactions, monthRange]);
 
-  // Само текущия календарен месец (за "Последни записи")
   const txCurrentMonth = useMemo(() => {
     const now = new Date();
     const start = startOfMonth(now);
@@ -492,7 +678,6 @@ export default function App() {
     return { income, expense, balance: income - expense };
   }, [txThisMonth]);
 
-  // Wasteful sum (only expenses in current month)
   const wastefulSum = useMemo(() => {
     return txThisMonth.reduce((sum, t) => {
       if (t.type === "expense" && wasteful.has(t.id)) sum += t.amount;
@@ -500,7 +685,6 @@ export default function App() {
     }, 0);
   }, [txThisMonth, wasteful]);
 
-  // Разходи по категории за избрания месец (само разходи)
   const monthExpenseByCat = useMemo(() => {
     const sums = new Map();
     for (const t of txThisMonth) {
@@ -508,31 +692,35 @@ export default function App() {
       sums.set(t.category, (sums.get(t.category) || 0) + t.amount);
     }
     const arr = Array.from(sums, ([name, value]) => ({ name, value }));
-    arr.sort((a, b) => b.value - a.value); // най-големите напред
+    arr.sort((a, b) => b.value - a.value);
     return arr;
   }, [txThisMonth]);
 
-  // За скала на синьото (интензитет)
   const maxCatValue = useMemo(
     () => Math.max(1, ...monthExpenseByCat.map((x) => x.value)),
     [monthExpenseByCat]
   );
 
-  // Фон според сумата (по-тъмно синьо = по-голяма сума)
   const catBg = (v) => {
     const opacity = Math.max(0.12, Math.min(0.9, (v / maxCatValue) * 0.9));
-    return `rgba(96,165,250,${opacity})`; // #60a5fa
+    return `rgba(96,165,250,${opacity})`;
   };
 
-  // Handlers
+  // безопасен UUID
+  const uuid = () =>
+    typeof crypto !== "undefined" && crypto && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+  // Записване
   const addTransaction = (e) => {
     e.preventDefault();
     const amt = Number(amount);
-    if (!amt || amt <= 0) return;
-    if (!category) return;
+    const canSave = amt > 0 && !!category;
+    if (!canSave) return;
 
     const t = {
-      id: crypto.randomUUID(),
+      id: uuid(),
       type,
       amount: amt,
       category,
@@ -555,11 +743,15 @@ export default function App() {
     setNewCat("");
   };
 
+  // не трий последната категория
   const removeExpenseCategory = (c) => {
-    setExpenseCategories((prev) => prev.filter((x) => x !== c));
+    setExpenseCategories((prev) => {
+      const next = prev.filter((x) => x !== c);
+      return next.length ? next : prev;
+    });
     setCategory((curr) =>
       type === "expense"
-        ? expenseCategories.filter((x) => x !== c)[0] || ""
+        ? expenseCategories.filter((x) => x !== c)[0] || curr || ""
         : curr
     );
   };
@@ -572,20 +764,15 @@ export default function App() {
     });
   };
 
-  // ==========================
-  // Експорт в Excel
-  // ==========================
+  // Експорт в Excel (за избрания месец)
   const exportMonthToXLSX = () => {
     const rows = [["Дата", "Тип", "Категория", "Бележка", "Сума", "Излишен"]];
 
     const sorted = txThisMonth
       .slice()
-      .sort(
-        (a, b) => new Date(a.date).getDate() - new Date(b.date).getDate()
-      );
+      .sort((a, b) => new Date(a.date).getDate() - new Date(b.date).getDate());
 
     for (const t of sorted) {
-      // ✅ Дата като истински Date за правилен Excel формат
       let excelDate = "";
       if (t.date && /^\d{4}-\d{2}-\d{2}$/.test(t.date)) {
         const [y, m, d] = t.date.split("-").map(Number);
@@ -608,7 +795,6 @@ export default function App() {
     const ws = XLSX.utils.aoa_to_sheet(rows);
     const range = XLSX.utils.decode_range(ws["!ref"]);
 
-    // Формат дата (A)
     for (let r = 1; r <= range.e.r; r++) {
       const addr = XLSX.utils.encode_cell({ r, c: 0 });
       const cell = ws[addr];
@@ -618,7 +804,6 @@ export default function App() {
       }
     }
 
-    // Формат сума (E)
     for (let r = 1; r <= range.e.r; r++) {
       const addr = XLSX.utils.encode_cell({ r, c: 4 });
       const cell = ws[addr];
@@ -651,6 +836,8 @@ export default function App() {
     XLSX.writeFile(wb, fileName);
   };
 
+  const canSave = Number(amount) > 0 && !!category;
+
   return (
     <div
       className="w-full bg-[#0b0f12] text-[#e5e7eb]"
@@ -662,8 +849,7 @@ export default function App() {
       >
         <div className="max-w-xl mx-auto px-4 py-3 flex items-center justify-between">
           <h1 className="text-base sm:text-lg font-semibold tracking-tight flex items-center gap-2">
-            <Wallet className="w-5 h-5 shrink-0" />{" "}
-            <span className="truncate">Емилия</span>
+            <Wallet className="w-5 h-5 shrink-0" /> <span className="truncate">Емилия</span>
           </h1>
           <nav className="flex gap-2 text-sm">
             <button
@@ -698,6 +884,13 @@ export default function App() {
       </header>
 
       <main className="max-w-xl mx-auto p-4 pb-28 sm:pb-24">
+        {/* ако localStorage е препълнен */}
+        {persistError && (
+          <div className="mb-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+            {persistError}
+          </div>
+        )}
+
         {tab === "input" ? (
           <section className="space-y-6 mt-6 sm:mt-8">
             {/* Формата */}
@@ -794,7 +987,7 @@ export default function App() {
                   </select>
                 </div>
 
-                {/* 🆕 Бележка */}
+                {/* Бележка */}
                 <div className="rounded-xl border border-white/10 bg-black/20 px-3 py-2">
                   <input
                     value={note}
@@ -805,11 +998,18 @@ export default function App() {
                   />
                 </div>
 
-                {/* Бутон Запази – малък и центриран */}
+                {/* Запази */}
                 <div className="flex justify-center mt-5">
                   <button
                     type="submit"
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-white/30 text-black px-6 py-2.5 text-sm font-semibold shadow-sm hover:shadow-md hover:bg-white/50 active:scale-[0.99] transition-all"
+                    disabled={!canSave}
+                    className={`inline-flex items-center justify-center gap-2 rounded-xl px-6 py-2.5 text-sm font-semibold shadow-sm active:scale-[0.99] transition-all
+                    ${
+                      canSave
+                        ? "bg-white/30 text-black hover:shadow-md hover:bg-white/50"
+                        : "bg-white/10 text-white/40 cursor-not-allowed"
+                    }`}
+                    title={!canSave ? "Въведи сума и избери категория" : ""}
                   >
                     <PlusCircle className="w-4 h-4" />
                   </button>
@@ -817,140 +1017,28 @@ export default function App() {
               </form>
             </div>
 
-            {/* Последни записи */}
-            <div className="rounded-xl sm:rounded-2xl border border-white/10 bg-white/5 overflow-hidden p-3 sm:p-6">
+            {/* Малък мотиватор — само дневен цитат */}
+            <div className="relative rounded-2xl border border-white/10 bg-white/5 p-5 sm:p-6 min-h-[140px] sm:min-h-[160px] flex items-center justify-center">
               <button
-                onClick={() => setOpenRecent((s) => !s)}
-                className="w-full flex items-center justify-between px-4 py-3 sm:px-5 sm:py-4"
+                type="button"
+                onClick={shuffleQuote}
+                className="absolute top-2 right-2 px-2 py-1 text-xs rounded-lg border border-white/10 hover:bg-white/10"
+                title="Нов цитат"
               >
-                <span className="text-sm uppercase tracking-wider text-white/70">
-                  Последни записи
-                </span>
-                {openRecent ? (
-                  <ChevronUp className="w-4 h-4" />
-                ) : (
-                  <ChevronDown className="w-4 h-4" />
-                )}
+                §
               </button>
-
-              {openRecent && (
-                <div className="px-4 pb-4 sm:px-5 sm:pb-5">
-                  {transactions.length === 0 ? (
-                    <p className="text-white/60 text-sm">Няма записи още.</p>
-                  ) : (
-                    <div
-                      className="w-full overflow-x-auto"
-                      role="region"
-                      aria-label="Хоризонтално превъртане на последните записи"
-                    >
-                      <table className="w-full min-w-[720px] text-[12px] sm:text-sm leading-tight">
-                        <thead className="bg-white/5">
-                          <tr className="text-left text-white/70">
-                            <th className="px-2 py-1.5 sm:px-3 sm:py-2 whitespace-nowrap">
-                              Дата
-                            </th>
-                            <th className="px-2 py-1.5 sm:px-3 sm:py-2 whitespace-nowrap">
-                              Тип
-                            </th>
-                            <th className="px-2 py-1.5 sm:px-3 sm:py-2 whitespace-nowrap">
-                              Категория
-                            </th>
-                            <th className="px-2 py-1.5 sm:px-3 sm:py-2 whitespace-nowrap">
-                              Бележка
-                            </th>
-                            <th className="px-2 py-1.5 sm:px-3 sm:py-2 text-right whitespace-nowrap">
-                              Сума
-                            </th>
-                            <th className="px-1.5 py-1.5 sm:px-3 sm:py-2"></th>
-                          </tr>
-                        </thead>
-
-                        <tbody>
-                          {txCurrentMonth
-                            .slice()
-                            .sort((a, b) => {
-                              if (a.type !== b.type)
-                                return a.type === "income" ? -1 : 1; // приходи първо
-                              const da = new Date(a.date);
-                              const db = new Date(b.date);
-                              const dayCmp = da.getDate() - db.getDate();
-                              if (dayCmp !== 0) return dayCmp;
-                              return da - db; // tie-breaker
-                            })
-                            .map((t) => (
-                              <tr
-                                key={t.id}
-                                className="border-t border-white/10"
-                              >
-                                <td className="px-2 py-1.5 sm:px-3 sm:py-2 text-white/80 whitespace-nowrap">
-                                  {dateBG(t.date)}
-                                </td>
-
-                                <td className="px-2 py-1.5 sm:px-3 sm:py-2">
-                                  <span
-                                    className={`text-[10px] sm:text-xs px-1.5 py-0.5 rounded-lg ${
-                                      t.type === "income"
-                                        ? "bg-emerald-400/10 text-emerald-300 border border-emerald-400/20"
-                                        : "bg-rose-400/10 text-rose-300 border border-rose-400/20"
-                                    }`}
-                                  >
-                                    {t.type === "income"
-                                      ? "Приход"
-                                      : "Разход"}
-                                  </span>
-                                </td>
-
-                                <td
-                                  className="px-2 py-1.5 sm:px-3 sm:py-2 text-white/80 whitespace-nowrap max-w-[28vw] sm:max-w-none truncate"
-                                  title={t.category || ""}
-                                >
-                                  {t.category || "—"}
-                                </td>
-
-                                <td
-                                  className="px-2 py-1.5 sm:px-3 sm:py-2 text-white/80 max-w-[34vw] sm:max-w-[40vw] truncate"
-                                  title={t.note?.trim() ? t.note : ""}
-                                >
-                                  {t.note?.trim() ? t.note : "—"}
-                                </td>
-
-                                <td className="px-2 py-1.5 sm:px-3 sm:py-2 text-right whitespace-nowrap">
-                                  {currency(t.amount)} лв.
-                                </td>
-
-                                <td className="px-1.5 py-1.5 sm:px-3 sm:py-2 text-right">
-                                  <button
-                                    className="p-1 rounded-lg hover:bg-white/10"
-                                    onClick={() => removeTx(t.id)}
-                                    aria-label="Изтрий"
-                                    title="Изтрий"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
-                          {txCurrentMonth.length === 0 && (
-                            <tr>
-                              <td
-                                colSpan={6}
-                                className="px-3 py-4 text-center text-white/60"
-                              >
-                                Няма записи за текущия месец.
-                              </td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              )}
+              <Quote className="absolute top-3 left-3 w-4 h-4 opacity-60" />
+              <Quote className="absolute bottom-3 right-3 w-4 h-4 opacity-60 rotate-180" />
+              <p className="mx-6 sm:mx-10 text-center text-base sm:text-lg leading-relaxed text-white/90">
+                <span className="align-[0.15em] text-sm opacity-70">“</span>
+                {quote}
+                <span className="align-[0.15em] text-sm opacity-70">”</span>
+              </p>
             </div>
           </section>
         ) : (
+          /* АНАЛИЗИ */
           <section className="space-y-4">
-            {/* Навигация по месеци */}
             <div className="rounded-2xl border border-white/10 bg-white/5 p-3 sm:p-4">
               <div className="flex items-center justify-between gap-2">
                 <button
@@ -976,7 +1064,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* Обобщение (месец) */}
             <div className="grid grid-cols-3 gap-3 sm:gap-4 mt-2">
               <StatCard
                 title="Приход (м.)"
@@ -994,13 +1081,10 @@ export default function App() {
                 title="Баланс (м.)"
                 value={`${currency(monthTotals.balance)} лв.`}
                 icon={<Wallet className="w-4 h-4" />}
-                subtle={
-                  monthTotals.balance >= 0 ? "text-sky-300" : "text-amber-300"
-                }
+                subtle={monthTotals.balance >= 0 ? "text-sky-300" : "text-amber-300"}
               />
             </div>
 
-            {/* Календар на разходите (месец) */}
             <div className="rounded-2xl border border-white/10 bg-white/5 p-3 sm:p-4">
               <h3 className="text-sm uppercase tracking-wider text-white/70 mb-3">
                 Календар на разходите
@@ -1012,7 +1096,6 @@ export default function App() {
               />
             </div>
 
-            {/* Разходи по категории (месец) */}
             <div className="rounded-2xl border border-white/10 bg-white/5">
               <button
                 onClick={() => setOpenCatSums((s) => !s)}
@@ -1029,35 +1112,50 @@ export default function App() {
               </button>
 
               {openCatSums && (
-                <div className="px-4 pb-4 sm:px-5 sm:pb-5">
+                <div className="px-4 pt-2 pb-5 sm:px-5 sm:pt-2 sm:pb-6">
                   {monthExpenseByCat.length === 0 ? (
-                    <p className="text-white/60 text-sm">
-                      Няма разходи за този месец.
-                    </p>
+                    <p className="text-white/60 text-sm">Няма разходи за този месец.</p>
                   ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                      {monthExpenseByCat.map((c) => (
-                        <div
-                          key={c.name}
-                          className="h-12 rounded-xl border border-white/10 px-3 py-2 flex items-center justify-between"
-                          style={{ background: catBg(c.value) }}
-                          title={`${c.name} — ${currency(c.value)} лв.`}
-                        >
-                          <span className="text-xs sm:text-sm font-medium truncate">
-                            {c.name}
-                          </span>
-                          <span className="text-xs sm:text-sm font-semibold">
-                            {currency(c.value)} лв.
-                          </span>
+                    <>
+                      <div className="px-0.5 sm:px-1">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-2.5">
+                          {monthExpenseByCat.map((c) => (
+                            <button
+                              key={c.name}
+                              onClick={() => {
+                                const items = txThisMonth.filter(
+                                  (t) =>
+                                    t.type === "expense" &&
+                                    t.category === c.name
+                                );
+                                setCatModal({
+                                  open: true,
+                                  category: c.name,
+                                  items,
+                                });
+                              }}
+                              className="h-11 sm:h-12 rounded-xl border border-white/10 px-2.5 py-2
+                                     flex items-center justify-between text-left hover:bg-white/10 transition
+                                      shadow-sm"
+                              style={{ background: catBg(c.value) }}
+                              title={`${c.name} — ${currency(c.value)} лв.`}
+                            >
+                              <span className="text-[12px] sm:text-[13px] font-medium truncate">
+                                {c.name}
+                              </span>
+                              <span className="text-[12px] sm:text-[13px] font-semibold">
+                                {currency(c.value)} лв.
+                              </span>
+                            </button>
+                          ))}
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    </>
                   )}
                 </div>
               )}
             </div>
 
-            {/* Категории (разходи) */}
             <div className="rounded-2xl border border-white/10 bg-white/5">
               <button
                 onClick={() => setOpenCats((s) => !s)}
@@ -1066,11 +1164,7 @@ export default function App() {
                 <span className="text-sm uppercase tracking-wider text-white/70">
                   Категории (разходи)
                 </span>
-                {openCats ? (
-                  <ChevronUp className="w-4 h-4" />
-                ) : (
-                  <ChevronDown className="w-4 h-4" />
-                )}
+                {openCats ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
               </button>
 
               {openCats && (
@@ -1117,7 +1211,6 @@ export default function App() {
               )}
             </div>
 
-            {/* Записи (месец) */}
             <div className="rounded-2xl border border-white/10 bg-white/5">
               <button
                 onClick={() => setOpenMonthRecords((s) => !s)}
@@ -1126,11 +1219,7 @@ export default function App() {
                 <span className="text-sm uppercase tracking-wider text-white/70">
                   Записи (месец)
                 </span>
-                {openMonthRecords ? (
-                  <ChevronUp className="w-4 h-4" />
-                ) : (
-                  <ChevronDown className="w-4 h-4" />
-                )}
+                {openMonthRecords ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
               </button>
 
               {openMonthRecords && (
@@ -1140,10 +1229,11 @@ export default function App() {
                     role="region"
                     aria-label="Хоризонтално превъртане на таблицата"
                   >
-                    <table className="w-full min-w-[640px] text-sm">
+                    <table className="w-full min-w-[760px] text-sm">
                       <thead className="bg-white/5">
                         <tr className="text-left text-white/70">
                           <th className="px-3 py-2">Дата</th>
+                          <th className="px-3 py-2">Тип</th>
                           <th className="px-3 py-2">Категория</th>
                           <th className="px-3 py-2">Бележка</th>
                           <th className="px-3 py-2 text-right">Сума</th>
@@ -1155,7 +1245,7 @@ export default function App() {
                         {txThisMonth.length === 0 ? (
                           <tr>
                             <td
-                              colSpan={6}
+                              colSpan={7}
                               className="px-3 py-4 text-center text-white/60"
                             >
                               Няма записи през този месец.
@@ -1178,6 +1268,17 @@ export default function App() {
                                 <td className="px-3 py-2 text-white/80 whitespace-nowrap">
                                   {dateBG(t.date)}
                                 </td>
+                                <td className="px-3 py-2">
+                                  <span
+                                    className={`text-xs px-2 py-0.5 rounded-lg ${
+                                      t.type === "income"
+                                        ? "bg-emerald-400/10 text-emerald-300 border border-emerald-400/20"
+                                        : "bg-rose-400/10 text-rose-300 border border-rose-400/20"
+                                    }`}
+                                  >
+                                    {t.type === "income" ? "Приход" : "Разход"}
+                                  </span>
+                                </td>
                                 <td className="px-3 py-2 text-white/80 whitespace-nowrap">
                                   {t.category}
                                 </td>
@@ -1199,6 +1300,7 @@ export default function App() {
                                     <span className="text-white/30">—</span>
                                   )}
                                 </td>
+
                                 <td className="px-3 py-2 text-right">
                                   <button
                                     onClick={() => removeTx(t.id)}
@@ -1213,17 +1315,24 @@ export default function App() {
                       </tbody>
                     </table>
                   </div>
-
                   <div className="mt-3 text-sm text-white/80 flex items-center justify-between">
                     <span>Общо „излишни“ разходи за месеца:</span>
-                    <span className="font-semibold">
-                      {currency(wastefulSum)} лв.
-                    </span>
+                    <span className="font-semibold">{currency(wastefulSum)} лв.</span>
                   </div>
                 </div>
               )}
             </div>
           </section>
+        )}
+
+        {catModal.open && (
+          <CategoryModal
+            category={catModal.category}
+            items={catModal.items}
+            onClose={() =>
+              setCatModal({ open: false, category: "", items: [] })
+            }
+          />
         )}
       </main>
 
